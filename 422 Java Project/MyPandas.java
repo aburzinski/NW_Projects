@@ -1,5 +1,9 @@
+package AliciaEdits;
+
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,11 +34,9 @@ public class MyPandas {
 		
 		for (int col = 0; col < listOfLists.size(); col++) {
 			boolean isInt = true;
-			for (Object o: listOfLists.get(col)) {
-				if (MyUtil.tryParseInt(o.toString()) == false) {
+			if (MyUtil.tryParseInt(listOfLists.get(col).get(0).toString()) == false) {
 					isInt = false;
 				}
-			}
 			if (isInt) {
 				types[col] = "Integer";
 			}
@@ -47,57 +49,48 @@ public class MyPandas {
 		return df;
 	}
 	
+	public static void writeCSV(MyDataFrame data, String path) throws IOException {
+		String header = "";
+		for (String str : data.getColumnNames()) {
+			header = header + str + ",";
+		}
+		header = header.substring(0, header.length() - 1);
+		int lengthOfFile = data.getLength();
+		String[] writeLines = new String[lengthOfFile];
+
+		//loop over rows
+		for (int i = 0; i < lengthOfFile; i++) {
+			String newLine = "";
+			//loop over columns
+			for (int j = 0; j < data.getWidth(); j++) {
+				newLine = newLine + data.getIndexedValue(i, j).toString() + ",";
+			}
+			newLine = newLine.substring(0, newLine.length() - 1);
+			writeLines[i] = newLine;
+		}
+		
+		BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(path));
+		bufferedWriter.write(header+"\n");
+		for (String line : writeLines) {
+			bufferedWriter.write(line+"\n");
+		}
+		bufferedWriter.close();
+
+	}
+	
 	public static MyDataFrame concat(MyDataFrame df1, MyDataFrame df2) {
-		ArrayList<String> concatColumns = new ArrayList<String>();
-		for (String name: df1.getColumnNames()) {
-			concatColumns.add(name);
-		}
-		for (String name: df2.getColumnNames()) {
-			concatColumns.add(name);
-		}
+		ArrayList<String> concatColumns = (ArrayList<String>) df1.getColumnNames();
+		ArrayList<String> concatTypes = (ArrayList<String>) df1.getColumnTypes();
 		
-		ArrayList<String> concatTypes = new ArrayList<String>();
-		for (String type: df1.getColumnTypes()) {
-			concatTypes.add(type);
-		}
-		for (String type: df2.getColumnTypes()) {
-			concatTypes.add(type);
-		}
+		List<List<Object>> concatData = df1.data;
 		
-		int concatWidth = df1.getWidth() + df2.getWidth();
-		List<List<Object>> concatData = new ArrayList<>();
-		for (int col = 0; col < concatWidth; col++) {
-			concatData.add(new ArrayList<>());
-		}
-		
-		for (int row = 0; row < Math.min(df1.getLength(), df2.getLength()); row++) {
-			for (int col = 0; col < df1.getWidth(); col++) {
-				concatData.get(col).add(df1.getIndexedValue(row, col));
-			}
-			for (int col = df1.getWidth(); col < concatWidth; col++) {
-				concatData.get(col).add(df2.getIndexedValue(row, col - df1.getWidth()));
+
+		for (int row = 0; row < df2.getLength(); row++) {
+			for (int col = 0; col < df2.getWidth(); col++) {
+				concatData.get(col).add(df2.getIndexedValue(row, col));
 			}
 		}
 		
-		if (df1.getLength() > df2.getLength()) {
-			for (int row = df2.getLength(); row < df1.getLength(); row++) {
-				for (int col = 0; col < df1.getWidth(); col++) {
-					concatData.get(col).add(df1.getIndexedValue(row, col));
-				}
-				for (int col = df1.getWidth(); col < concatWidth; col++) {
-					concatData.get(col).add("NA");
-				}
-			}
-		} else if (df1.getLength() < df2.getLength()) {
-			for (int row = df1.getLength(); row < df2.getLength(); row++) {
-				for (int col = 0; col < df1.getWidth(); col++) {
-					concatData.get(col).add("NA");
-				}
-				for (int col = df1.getWidth(); col < concatWidth; col++) {
-					concatData.get(col).add(df2.getIndexedValue(row, col - df1.getWidth()));
-				}
-			}
-		}
 		
 		return new MyDataFrame(concatColumns, concatTypes, concatData);
 	}
